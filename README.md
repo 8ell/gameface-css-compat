@@ -181,6 +181,8 @@ npm run test:browser   # Chromium equivalence (needs Playwright's Chromium, or C
 
 `.github/workflows/upstream-sync.yml` runs weekly. When a new `eslint-plugin-gameface` is published, it installs it, regenerates the coverage document, runs every test including the browser suite, and opens a pull request that summarizes which catalog items appeared, disappeared or changed outcome. If everything passes, the pull request merges itself. To turn that off, set the repository variable `AUTO_MERGE_UPSTREAM` to `false`.
 
+Each sync also bumps the patch version. `.github/workflows/release.yml` publishes any version on `main` that is not on npm yet: it runs every test, publishes with provenance, then tags the commit and creates a GitHub Release. To make a release by hand, bump `version` in `package.json` on `main`.
+
 New unsupported features need no new code. The data-driven pipeline removes and reports them until someone adds an exact rewrite. When a feature leaves the catalog because Gameface now supports it, its rewrite switches off automatically for that version.
 
 ## Limitations

@@ -47,6 +47,7 @@ jobs:
             package.json
             package-lock.json
             docs/coverage.md
+            CHANGELOG.md
           labels: upstream
       - if: steps.pr.outputs.pull-request-number && vars.AUTO_MERGE_UPSTREAM != 'false'
         env:

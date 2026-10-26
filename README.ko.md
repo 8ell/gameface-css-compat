@@ -151,6 +151,8 @@ npx gameface-css-compat coverage --json     # 카탈로그 전체 항목의 처�
 
 `.github/workflows/upstream-sync.yml`이 매주 실행됩니다. `eslint-plugin-gameface` 새 버전이 나오면 설치하고, 커버리지 문서를 다시 만들고, 브라우저 테스트를 포함한 전체 테스트를 돌린 뒤, 새로 생기거나 사라지거나 결과가 바뀐 항목을 정리한 PR을 엽니다. 테스트가 모두 통과하면 PR은 자동으로 머지됩니다. 자동 머지를 끄려면 저장소 변수 `AUTO_MERGE_UPSTREAM`을 `false`로 설정하세요.
 
+동기화할 때마다 patch 버전도 올립니다. `.github/workflows/release.yml`은 main에 있는 버전이 npm에 아직 없으면 전체 테스트를 돌리고, provenance와 함께 배포한 뒤, 태그와 GitHub Release를 만듭니다. 수동으로 릴리스하려면 main에서 `package.json`의 `version`만 올리면 됩니다.
+
 새로 추가된 미지원 기능은 코드 수정 없이도 데이터 기반 파이프라인이 제거하고 보고합니다. 반대로 Gameface가 지원하게 되어 카탈로그에서 빠진 기능은 해당 버전에서 변환이 자동으로 꺼집니다.
 
 ## 한계

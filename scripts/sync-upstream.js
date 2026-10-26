@@ -64,6 +64,16 @@ ${list(removed, (r) => `- \`${r.id}\``)}
 ${list(changed, (r) => `- \`${r.id}\`: ${beforeMap.get(r.id).outcome} → ${r.outcome}`)}
 `;
 writeFileSync('sync-summary.md', summary);
+
+// Patch release: merging this update publishes it (see release.yml).
+const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
+const [major, minor, patch] = pkg.version.split('.').map(Number);
+const next = `${major}.${minor}.${patch + 1}`;
+sh(npm, ['version', next, '--no-git-tag-version']);
+const today = new Date().toISOString().slice(0, 10);
+const changelog = readFileSync('CHANGELOG.md', 'utf8');
+const entry = `## ${next} — ${today}\n\n- Gameface data updated to eslint-plugin-gameface ${latest}: ${added.length} new catalog items, ${removed.length} removed, ${changed.length} changed outcomes.\n\n`;
+writeFileSync('CHANGELOG.md', changelog.replace(/^(# Changelog\n\n)/, `$1${entry}`));
 console.log(summary);
 output('updated', 'true');
 output('version', latest);
