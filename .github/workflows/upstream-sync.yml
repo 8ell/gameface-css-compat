@@ -1,0 +1,58 @@
+name: Upstream data sync
+
+# Checks weekly for a new eslint-plugin-gameface (the source of all Gameface
+# feature data), updates it, regenerates docs/coverage.md, runs every test
+# (including the Chromium equivalence suite) and opens a pull request that is
+# merged automatically when everything passes.
+#
+# Optional: add a fine-grained token as the SYNC_TOKEN secret (contents and
+# pull requests: write) so the PR also triggers the regular CI workflow.
+# Set the repository variable AUTO_MERGE_UPSTREAM to "false" to review PRs by hand.
+
+on:
+  schedule:
+    - cron: '17 23 * * 0' # Mondays 08:17 KST
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - id: sync
+        run: node scripts/sync-upstream.js
+      - if: steps.sync.outputs.updated == 'true'
+        run: npm test
+      - if: steps.sync.outputs.updated == 'true'
+        run: npx playwright install --with-deps chromium && npm run test:browser
+      - if: steps.sync.outputs.updated == 'true'
+        id: pr
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.SYNC_TOKEN || github.token }}
+          branch: upstream/eslint-plugin-gameface
+          commit-message: 'chore: update Gameface data to eslint-plugin-gameface ${{ steps.sync.outputs.version }}'
+          title: 'Update Gameface data to eslint-plugin-gameface ${{ steps.sync.outputs.version }}'
+          body-path: sync-summary.md
+          add-paths: |
+            package.json
+            package-lock.json
+            docs/coverage.md
+          labels: upstream
+      - if: steps.pr.outputs.pull-request-number && vars.AUTO_MERGE_UPSTREAM != 'false'
+        env:
+          GH_TOKEN: ${{ secrets.SYNC_TOKEN || github.token }}
+        # Every test already passed in this job. Prefer auto-merge (waits for
+        # required checks); without branch protection, merge directly.
+        run: |
+          gh pr merge "${{ steps.pr.outputs.pull-request-number }}" --auto --squash \
+            || gh pr merge "${{ steps.pr.outputs.pull-request-number }}" --squash
