@@ -1,9 +1,16 @@
 name: Upstream data sync
 
 # Checks weekly for a new eslint-plugin-gameface (the source of all Gameface
-# feature data), updates it, regenerates docs/coverage.md, runs every test
-# (including the Chromium equivalence suite) and opens a pull request that is
-# merged automatically when everything passes.
+# feature data), updates it, regenerates docs/coverage.md, bumps the patch
+# version, runs every test (including the Chromium equivalence suite) and
+# opens a pull request. When everything passes the PR is merged, and the
+# Release workflow publishes the new patch version.
+#
+# Safety:
+#   - the new upstream package is installed with --ignore-scripts and its
+#     registry signature is verified (npm audit signatures)
+#   - tests run without any credentials on disk (persist-credentials: false)
+#   - a new upstream MAJOR version is never merged automatically
 #
 # Optional: add a fine-grained token as the SYNC_TOKEN secret (contents and
 # pull requests: write) so the PR also triggers the regular CI workflow.
@@ -15,15 +22,19 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 jobs:
   sync:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
           cache: npm
@@ -31,12 +42,14 @@ jobs:
       - id: sync
         run: node scripts/sync-upstream.js
       - if: steps.sync.outputs.updated == 'true'
+        run: npm audit signatures
+      - if: steps.sync.outputs.updated == 'true'
         run: npm test
       - if: steps.sync.outputs.updated == 'true'
         run: npx playwright install --with-deps chromium && npm run test:browser
       - if: steps.sync.outputs.updated == 'true'
         id: pr
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         with:
           token: ${{ secrets.SYNC_TOKEN || github.token }}
           branch: upstream/eslint-plugin-gameface
@@ -49,11 +62,12 @@ jobs:
             docs/coverage.md
             CHANGELOG.md
           labels: upstream
-      - if: steps.pr.outputs.pull-request-number && vars.AUTO_MERGE_UPSTREAM != 'false'
+      - if: steps.pr.outputs.pull-request-number && vars.AUTO_MERGE_UPSTREAM != 'false' && steps.sync.outputs.major != 'true'
         env:
           GH_TOKEN: ${{ secrets.SYNC_TOKEN || github.token }}
+          PR: ${{ steps.pr.outputs.pull-request-number }}
         # Every test already passed in this job. Prefer auto-merge (waits for
         # required checks); without branch protection, merge directly.
         run: |
-          gh pr merge "${{ steps.pr.outputs.pull-request-number }}" --auto --squash \
-            || gh pr merge "${{ steps.pr.outputs.pull-request-number }}" --squash
+          gh pr merge "$PR" --auto --squash --repo "$GITHUB_REPOSITORY" \
+            || gh pr merge "$PR" --squash --repo "$GITHUB_REPOSITORY"

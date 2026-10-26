@@ -42,10 +42,23 @@ removed   hud.css:6 property:float  float: left  (Gameface does not support floa
 
 The upstream catalog lists 758 features that Gameface lacks or only partly supports. In gameface mode, every one of them ends in one of two states:
 
-- **Converted**: it is rewritten to something Gameface supports that renders the same way. There are 133 such items, plus 3 that are partly converted.
-- **Removed and reported**: no equivalent exists, so it is dropped. Gameface's parser would have dropped it anyway. There are 614 such items, for example `float`, CSS grid, `:has()`, `@container`, and `calc()` that mixes `%` with `px`.
+- **Converted**: it is rewritten to something Gameface supports that renders the same way. There are 179 such items, plus 3 that are partly converted.
+- **Removed and reported**: no equivalent exists, so it is dropped. Gameface's parser would have dropped it anyway. There are 564 such items, for example `float`, CSS grid, `:has()`, `@container`, and `calc()` that mixes `%` with `px`.
 
 After the rewrite, the official linter reports **zero errors** on the output for every supported Gameface version. [docs/coverage.md](docs/coverage.md) lists what happens to each catalog item. It is generated and checked in CI.
+
+### Beyond the catalog
+
+Gameface mode also lowers modern syntax that the official linter does not check but that is newer than Gameface's parser. Each rewrite is exact in every engine, so it is safe whether or not Gameface understands the original:
+
+| Input | Output |
+| --- | --- |
+| native CSS nesting | flat rules, with spec semantics |
+| `@media (400px <= width <= 800px)` | `@media (min-width: 400px) and (max-width: 800px)` (`<` and `>` are reported, because they have no exact equivalent) |
+| `light-dark(a, b)` | `a` (Gameface has no `color-scheme`) |
+| `rgb(from red r g calc(b + 20))` and the other relative colours | `rgb()` |
+| `dvh` `svh` `lvh` `vi` `vb` and the `cq*` units | `vh` `vw` `vmin` `vmax` (a game view has no browser UI and no query containers) |
+| `cm` `mm` `q` `pc` | `px` |
 
 The tool never guesses. A rewrite runs only when it is exact for the situation the tool can prove. Anything that is merely close is an opt-in [approximation](#approximations).
 
@@ -163,6 +176,7 @@ These are off by default. Enable them with `approximations: [...]` or `--approx 
 | `font-weight-nearest` | `450` → `normal`, etc. | Gameface has only normal and bold |
 | `transform-merge` | folds `skew`/`perspective` into `matrix` even if the element may be animated | interpolation differs mid-animation |
 | `browser-defaults-preamble` | prepends Chromium-like UA defaults | Gameface's UA sheet differs |
+| `individual-transforms` | `translate`/`rotate`/`scale` → `transform` in the same rule | a browser composes them with `transform` set by other rules |
 
 ## How it is verified
 
@@ -184,6 +198,15 @@ npm run test:browser   # Chromium equivalence (needs Playwright's Chromium, or C
 Each sync also bumps the patch version. `.github/workflows/release.yml` publishes any version on `main` that is not on npm yet: it runs every test, publishes with provenance, then tags the commit and creates a GitHub Release. To make a release by hand, bump `version` in `package.json` on `main`.
 
 New unsupported features need no new code. The data-driven pipeline removes and reports them until someone adds an exact rewrite. When a feature leaves the catalog because Gameface now supports it, its rewrite switches off automatically for that version.
+
+## Security
+
+- At runtime the package makes no network requests and runs no other programs. It does not use `eval`, and it has no install scripts. It reads only the files you pass it and writes only the outputs you ask for.
+- It contains no API keys and calls no AI service. "Automated" here means CI scripts and tests, not a model at runtime.
+- Releases are published from GitHub Actions with [npm provenance](https://docs.npmjs.com/generating-provenance-statements), so every published version can be traced to the commit and workflow that built it.
+- In CI, actions are pinned to commit SHAs and workflows keep no credentials on disk. The npm token is visible only to the publish step. Dependency signatures are checked with `npm audit signatures`. Upstream updates are installed with `--ignore-scripts`, and a new upstream major version is never merged automatically.
+
+See [SECURITY.md](SECURITY.md) to report a vulnerability.
 
 ## Limitations
 

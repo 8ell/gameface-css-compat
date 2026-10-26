@@ -56,10 +56,7 @@ const { values, positionals } = parseArgs({
 
 const [command, ...inputs] = positionals;
 
-if (values.help || !command) {
-  process.stdout.write(HELP);
-  process.exit(command ? 0 : 1);
-}
+const showHelp = Boolean(values.help || !command);
 
 const list = (v) => (v ? v.split(',').map((s) => s.trim()).filter(Boolean) : []);
 
@@ -113,6 +110,10 @@ function printReport(report, cwd) {
 }
 
 async function run() {
+  if (showHelp) {
+    process.stdout.write(HELP);
+    return command ? 0 : 1;
+  }
   const cwd = process.cwd();
 
   if (command === 'versions') {
@@ -192,10 +193,14 @@ function commonDir(files) {
   return first.slice(0, i).join('/') || '/';
 }
 
+// Set exitCode instead of calling process.exit(): exiting immediately can cut
+// off output that is still being written to a pipe (large --json output).
 run().then(
-  (code) => process.exit(code),
+  (code) => {
+    process.exitCode = code;
+  },
   (err) => {
     process.stderr.write(`gameface-css-compat: ${err.message}\n`);
-    process.exit(2);
+    process.exitCode = 2;
   },
 );

@@ -37,10 +37,23 @@
 
 공식 카탈로그에는 Gameface가 지원하지 않거나 일부만 지원하는 항목이 758개 있습니다. gameface 모드에서는 이 항목들이 모두 다음 둘 중 하나로 처리됩니다.
 
-- **변환**: Gameface가 지원하면서 렌더링 결과가 같은 코드로 바꿉니다. 133개이고, 일부만 변환되는 항목이 3개 더 있습니다.
-- **제거 후 보고**: 대체할 방법이 없어 삭제합니다. 어차피 Gameface 파서가 버리는 코드입니다. 614개이며 `float`, grid, `:has()`, `@container`, `%`와 `px`를 섞은 `calc()` 등이 여기에 속합니다.
+- **변환**: Gameface가 지원하면서 렌더링 결과가 같은 코드로 바꿉니다. 179개이고, 일부만 변환되는 항목이 3개 더 있습니다.
+- **제거 후 보고**: 대체할 방법이 없어 삭제합니다. 어차피 Gameface 파서가 버리는 코드입니다. 564개이며 `float`, grid, `:has()`, `@container`, `%`와 `px`를 섞은 `calc()` 등이 여기에 속합니다.
 
 변환이 끝난 출력에는 지원하는 모든 Gameface 버전에서 공식 린터 **에러가 0개**입니다. 항목별 처리 결과는 [docs/coverage.md](docs/coverage.md)에서 볼 수 있습니다. 이 문서는 자동 생성되며 CI에서 최신 상태인지 검사합니다.
+
+### 카탈로그 밖의 최신 문법
+
+gameface 모드에서는 공식 린터가 검사하지 않지만 Gameface 파서보다 새로운 문법도 예전 문법으로 바꿉니다. 모든 엔진에서 결과가 같은 변환이라, Gameface가 원래 문법을 이해하든 못하든 안전합니다.
+
+| 입력 | 출력 |
+| --- | --- |
+| CSS 네이티브 중첩(nesting) | 스펙과 같은 의미의 평면 규칙 |
+| `@media (400px <= width <= 800px)` | `@media (min-width: 400px) and (max-width: 800px)` (`<`, `>`는 정확한 대응이 없어 보고만 함) |
+| `light-dark(a, b)` | `a` (Gameface에는 `color-scheme`이 없음) |
+| `rgb(from red r g calc(b + 20))` 같은 상대 색상 | `rgb()` |
+| `dvh` `svh` `lvh` `vi` `vb`, `cq*` 단위 | `vh` `vw` `vmin` `vmax` (게임 화면에는 브라우저 UI도 컨테이너 쿼리도 없음) |
+| `cm` `mm` `q` `pc` | `px` |
 
 이 도구는 추측하지 않습니다. 변환은 도구가 확인할 수 있는 조건에서 정확히 같은 결과일 때만 적용됩니다. 비슷하기만 한 변환은 직접 켜야 하는 [근사 변환](#근사-변환)으로 분리해 두었습니다.
 
@@ -138,6 +151,7 @@ npx gameface-css-compat coverage --json     # 카탈로그 전체 항목의 처�
 | `font-weight-nearest` | `450` → `normal` 등 | Gameface에는 normal과 bold만 있음 |
 | `transform-merge` | 애니메이션 가능성이 있어도 `matrix`로 합침 | 애니메이션 중간 보간이 달라짐 |
 | `browser-defaults-preamble` | Chromium식 기본 스타일을 앞에 추가 | Gameface의 UA 스타일시트와 다름 |
+| `individual-transforms` | 같은 규칙의 `translate`/`rotate`/`scale`을 `transform`으로 합침 | 브라우저는 다른 규칙의 `transform`과 합성함 |
 
 ## 검증 방식
 
@@ -154,6 +168,19 @@ npx gameface-css-compat coverage --json     # 카탈로그 전체 항목의 처�
 동기화할 때마다 patch 버전도 올립니다. `.github/workflows/release.yml`은 main에 있는 버전이 npm에 아직 없으면 전체 테스트를 돌리고, provenance와 함께 배포한 뒤, 태그와 GitHub Release를 만듭니다. 수동으로 릴리스하려면 main에서 `package.json`의 `version`만 올리면 됩니다.
 
 새로 추가된 미지원 기능은 코드 수정 없이도 데이터 기반 파이프라인이 제거하고 보고합니다. 반대로 Gameface가 지원하게 되어 카탈로그에서 빠진 기능은 해당 버전에서 변환이 자동으로 꺼집니다.
+
+## 보안
+
+- 런타임에 네트워크 요청이나 외부 프로그램 실행을 하지 않습니다. `eval`도 쓰지 않고 설치 스크립트도 없습니다. 넘겨준 파일만 읽고, 요청한 결과물만 씁니다.
+- API 키가 없고 AI 서비스도 호출하지 않습니다. 여기서 말하는 "자동화"는 CI 스크립트와 테스트를 뜻하며, 런타임에 모델을 쓰지 않습니다.
+- 릴리스는 GitHub Actions에서 [npm provenance](https://docs.npmjs.com/generating-provenance-statements)와 함께 배포됩니다. 따라서 배포된 모든 버전을 그것을 빌드한 커밋과 워크플로까지 추적할 수 있습니다.
+- CI 보안:
+  - 액션은 커밋 SHA로 고정되어 있고, 워크플로는 인증 정보를 디스크에 남기지 않습니다.
+  - npm 토큰은 배포 단계에서만 보입니다.
+  - 의존성 서명은 `npm audit signatures`로 검사합니다.
+  - 업스트림 업데이트는 `--ignore-scripts`로 설치하며, 업스트림의 major 버전 업데이트는 자동 머지하지 않습니다.
+
+취약점 제보 방법은 [SECURITY.md](SECURITY.md)를 참고하세요.
 
 ## 한계
 

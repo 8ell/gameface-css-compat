@@ -1,9 +1,12 @@
 name: Release
 
 # Publishes whenever main carries a package.json version that is not on npm
-# yet: runs every test, publishes with provenance, then tags vX.Y.Z and creates
-# a GitHub Release. Releasing is therefore just "bump the version on main";
-# the weekly upstream sync does that by itself (patch bump).
+# yet. Releasing is therefore just "bump the version on main"; the weekly
+# upstream sync does that by itself (patch bump).
+#
+#   check    is this version already on npm?            (read-only)
+#   test     unit, coverage and browser tests            (read-only, no secrets)
+#   publish  npm publish with provenance, tag, Release   (NPM_TOKEN only here)
 #
 # Requires the NPM_TOKEN secret (or npm trusted publishing for this workflow).
 
@@ -16,51 +19,91 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
-  id-token: write
+  contents: read
 
 concurrency:
   group: release
   cancel-in-progress: false
 
 jobs:
-  publish:
+  check:
     runs-on: ubuntu-latest
+    outputs:
+      publish: ${{ steps.version.outputs.publish }}
+      version: ${{ steps.version.outputs.version }}
+      sha: ${{ steps.version.outputs.sha }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: main
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          registry-url: https://registry.npmjs.org
-          cache: npm
+          persist-credentials: false
       - id: version
         run: |
           name=$(node -p "require('./package.json').name")
           version=$(node -p "require('./package.json').version")
           echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
           if npm view "$name@$version" version >/dev/null 2>&1; then
             echo "$name@$version is already on npm; nothing to release."
             echo "publish=false" >> "$GITHUB_OUTPUT"
           else
             echo "publish=true" >> "$GITHUB_OUTPUT"
           fi
-      - if: steps.version.outputs.publish == 'true'
-        run: npm ci
-      - if: steps.version.outputs.publish == 'true'
-        run: npm test
-      - if: steps.version.outputs.publish == 'true'
-        run: npx playwright install --with-deps chromium && npm run test:browser
-      - if: steps.version.outputs.publish == 'true'
-        run: npm publish --provenance --access public
+
+  test:
+    needs: check
+    if: needs.check.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.check.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm audit signatures
+      - run: npm test
+      - run: npx playwright install --with-deps chromium && npm run test:browser
+
+  publish:
+    needs: [check, test]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # create the tag and the GitHub Release
+      id-token: write # npm provenance
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.check.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+      # The published package has no dependencies' code in it; nothing needs installing.
+      - name: npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      - if: steps.version.outputs.publish == 'true'
+        run: |
+          if [ -z "$NODE_AUTH_TOKEN" ]; then
+            echo "::error title=npm publish::The NPM_TOKEN secret is not set (Settings > Secrets and variables > Actions)."
+            exit 1
+          fi
+          set +e
+          npm publish --provenance --access public --ignore-scripts 2>&1 | tee publish.log
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            grep -E "npm (error|ERR!)" publish.log | head -8 | while IFS= read -r line; do
+              echo "::error title=npm publish::${line}"
+            done
+          fi
+          exit "$status"
+      - name: Tag and GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: v${{ steps.version.outputs.version }}
-        run: |
-          git tag "$TAG"
-          git push origin "$TAG"
-          gh release create "$TAG" --generate-notes --verify-tag
+          TAG: v${{ needs.check.outputs.version }}
+          SHA: ${{ needs.check.outputs.sha }}
+        run: gh release create "$TAG" --target "$SHA" --title "$TAG" --generate-notes --repo "$GITHUB_REPOSITORY"

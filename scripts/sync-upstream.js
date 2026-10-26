@@ -14,7 +14,7 @@ import { appendFileSync, readFileSync, writeFileSync } from 'node:fs';
 
 const PKG = 'eslint-plugin-gameface';
 const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-const sh = (cmd, args) => execFileSync(cmd, args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'] }).trim();
+const sh = (cmd, args) => execFileSync(cmd, args, { encoding: 'utf8', maxBuffer: 256 * 1024 * 1024, stdio: ['ignore', 'pipe', 'inherit'] }).trim();
 
 const installed = JSON.parse(readFileSync(new URL(`../node_modules/${PKG}/package.json`, import.meta.url), 'utf8')).version;
 const latest = sh(npm, ['view', PKG, 'version']);
@@ -35,7 +35,7 @@ const coverage = () => JSON.parse(sh(process.execPath, ['src/cli.js', 'coverage'
 const before = coverage();
 
 console.log(`Updating ${PKG} ${installed} -> ${latest}`);
-sh(npm, ['install', '--save-exact=false', `${PKG}@^${latest}`]);
+sh(npm, ['install', '--ignore-scripts', '--save-exact=false', `${PKG}@^${latest}`]);
 
 const after = coverage();
 sh(process.execPath, ['src/cli.js', 'coverage', '--markdown', 'docs/coverage.md']);
@@ -77,3 +77,4 @@ writeFileSync('CHANGELOG.md', changelog.replace(/^(# Changelog\n\n)/, `$1${entry
 console.log(summary);
 output('updated', 'true');
 output('version', latest);
+output('major', String(latest.split('.')[0] !== installed.split('.')[0]));

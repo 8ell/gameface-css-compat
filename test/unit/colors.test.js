@@ -28,6 +28,16 @@ test('color-mix follows CSS Color 5', () => {
 
 test('non-constant colours are refused', () => {
   assert.throws(() => c('hsl(var(--h) 50% 50%)'), NotConvertible);
-  assert.throws(() => c('hsl(from red h s l)'), NotConvertible);
+  assert.throws(() => c('hsl(from var(--c) h s l)'), NotConvertible);
+  assert.throws(() => c('rgb(from currentcolor r g b)'), NotConvertible);
+  assert.throws(() => c('oklch(from red l c calc(h + 90deg))'), NotConvertible); // h is a number, not an angle
   assert.throws(() => c('color-mix(in srgb, currentcolor, red)'), NotConvertible);
+});
+
+test('relative colours with a constant origin resolve', () => {
+  assert.equal(c('rgb(from red r g b / 50%)'), 'rgba(255, 0, 0, 0.5)');
+  assert.equal(c('hsl(from #3366cc calc(h + 180) s l)'), 'rgb(204, 153, 51)');
+  assert.equal(c('hwb(from red h 20% b)'), 'rgb(255, 51, 51)');
+  assert.equal(c('rgb(from hsl(120 100% 25%) calc(r * 2) g b)'), 'rgb(0, 128, 0)');
+  assert.equal(c('rgb(from #102030 calc(r * 20) g b)'), 'rgb(255, 32, 48)'); // rgb() clamps
 });

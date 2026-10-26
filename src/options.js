@@ -9,6 +9,7 @@ export const APPROXIMATIONS = /** @type {const} */ ([
   'font-weight-nearest',
   'transform-merge',
   'browser-defaults-preamble',
+  'individual-transforms',
 ]);
 
 /**

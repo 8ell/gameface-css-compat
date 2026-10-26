@@ -8,6 +8,7 @@
 
 import { converter, displayable, getMode, parse, toGamut } from 'culori';
 import valueParser from 'postcss-value-parser';
+import { NotFoldable, evaluateFunction, single } from './math.js';
 
 const toRgb = converter('rgb');
 const gamutMapRgb = toGamut('rgb', 'oklch');
@@ -48,6 +49,11 @@ export function parseConstantColor(text) {
   const t = text.trim();
   const lower = t.toLowerCase();
   if (lower.includes('var(') || lower.includes('env(') || lower.includes('attr(')) throw new NotConvertible('not a constant colour');
+  if (/^[a-z]+\(\s*from\s/.test(lower)) {
+    const node = valueParser(t).nodes[0];
+    if (!node || node.type !== 'function') throw new NotConvertible('bad relative colour');
+    return relativeColor(node);
+  }
   if (/\bfrom\b/.test(lower)) throw new NotConvertible('relative colour syntax');
   if (lower === 'currentcolor' || lower === 'inherit' || lower === 'initial' || lower === 'unset') {
     throw new NotConvertible('depends on context');
@@ -208,7 +214,8 @@ export function convertColor(text, { allowGamutMapping }) {
   const parsed = parseConstantColor(text);
   let rgb = toRgb(parsed);
   let gamutMapped = false;
-  const inGamut = ALWAYS_SRGB.has(name) || displayable({ ...rgb, r: rgb.r, g: rgb.g, b: rgb.b }) || nearlyDisplayable(rgb);
+  // rgb() channels clamp at parse time, like hsl()/hwb() saturation and lightness
+  const inGamut = ALWAYS_SRGB.has(name) || name === 'rgb' || name === 'rgba' || displayable({ ...rgb, r: rgb.r, g: rgb.g, b: rgb.b }) || nearlyDisplayable(rgb);
   if (!inGamut) {
     if (!allowGamutMapping) throw new NotConvertible('colour is outside sRGB; converting would change it on wide-gamut screens');
     rgb = gamutMapRgb(parsed);
@@ -221,4 +228,87 @@ export function convertColor(text, { allowGamutMapping }) {
 function nearlyDisplayable(rgb) {
   const eps = 1e-6;
   return ['r', 'g', 'b'].every((ch) => rgb[ch] >= -eps && rgb[ch] <= 1 + eps);
+}
+
+/**
+ * Relative colour syntax (CSS Color 5 §4): `rgb(from <origin> r g calc(b + 20))`.
+ * Channel keywords resolve to the origin's channels in the function's own
+ * space, using the reference ranges CSS defines for each channel.
+ */
+const RELATIVE = {
+  rgb: { mode: 'rgb', keys: ['r', 'g', 'b'], scale: [255, 255, 255], pct: [2.55, 2.55, 2.55] },
+  hsl: { mode: 'hsl', keys: ['h', 's', 'l'], scale: [1, 100, 100], pct: [null, 1, 1] },
+  hwb: { mode: 'hwb', keys: ['h', 'w', 'b'], scale: [1, 100, 100], pct: [null, 1, 1] },
+  lab: { mode: 'lab', keys: ['l', 'a', 'b'], scale: [1, 1, 1], pct: [1, 1.25, 1.25] },
+  lch: { mode: 'lch', keys: ['l', 'c', 'h'], scale: [1, 1, 1], pct: [1, 1.5, null] },
+  oklab: { mode: 'oklab', keys: ['l', 'a', 'b'], scale: [1, 1, 1], pct: [0.01, 0.004, 0.004] },
+  oklch: { mode: 'oklch', keys: ['l', 'c', 'h'], scale: [1, 1, 1], pct: [0.01, 0.004, null] },
+};
+RELATIVE.rgba = RELATIVE.rgb;
+RELATIVE.hsla = RELATIVE.hsl;
+
+const ANGLE = { deg: 1, grad: 0.9, rad: 180 / Math.PI, turn: 360 };
+
+/**
+ * @param {import('postcss-value-parser').FunctionNode} fn
+ */
+export function relativeColor(fn) {
+  const spec = RELATIVE[fn.value.toLowerCase()];
+  if (!spec) throw new NotConvertible(`relative ${fn.value}() is not supported`);
+  const nodes = fn.nodes.filter((n) => n.type !== 'space' && n.type !== 'comment');
+  const slash = nodes.findIndex((n) => n.type === 'div' && n.value === '/');
+  const main = slash === -1 ? nodes : nodes.slice(0, slash);
+  const alphaPart = slash === -1 ? [] : nodes.slice(slash + 1);
+  if (main.some((n) => n.type === 'div')) throw new NotConvertible('relative colours use the space-separated syntax');
+  if (main.length !== 5 || main[0].type !== 'word' || main[0].value.toLowerCase() !== 'from' || alphaPart.length > 1) {
+    throw new NotConvertible('bad relative colour');
+  }
+  const origin = converter(spec.mode)(parseConstantColor(valueParser.stringify(main[1])));
+  /** @type {Record<string, number>} */
+  const env = { alpha: origin.alpha ?? 1 };
+  spec.keys.forEach((k, i) => { env[k] = (origin[k] ?? 0) * spec.scale[i]; });
+
+  const out = { mode: spec.mode };
+  spec.keys.forEach((k, i) => {
+    const hue = k === 'h';
+    const v = channel(main[2 + i], env, { hue, pct: spec.pct[i] });
+    out[k] = hue ? v : v / spec.scale[i];
+  });
+  out.alpha = alphaPart.length ? Math.min(1, Math.max(0, channel(alphaPart[0], env, { hue: false, pct: 0.01 }))) : env.alpha;
+  return out;
+}
+
+/**
+ * One channel argument: a keyword, a number, a percentage, an angle or a math
+ * function over those.
+ * @param {import('postcss-value-parser').Node} node
+ * @param {Record<string, number>} env
+ * @param {{ hue: boolean, pct: number | null }} kind
+ */
+function channel(node, env, kind) {
+  let sum;
+  try {
+    if (node.type === 'word') {
+      const w = node.value.toLowerCase();
+      if (w in env) return env[w];
+      if (w === 'none') return 0;
+      sum = evaluateFunction({ type: 'function', value: 'calc', nodes: [node] });
+    } else if (node.type === 'function') {
+      const copy = structuredClone(node);
+      valueParser.walk(copy.nodes, (n) => {
+        if (n.type === 'word' && n.value.toLowerCase() in env) n.value = String(env[n.value.toLowerCase()]);
+      });
+      sum = evaluateFunction(copy);
+    } else throw new NotConvertible('bad channel');
+  } catch (err) {
+    if (err instanceof NotFoldable) throw new NotConvertible(`cannot evaluate channel: ${err.message}`);
+    throw err;
+  }
+  const one = single(sum);
+  if (!one) throw new NotConvertible('channel mixes units');
+  const [unit, value] = one;
+  if (unit === '') return value;
+  if (unit === '%' && kind.pct !== null) return value * kind.pct;
+  if (kind.hue && unit in ANGLE) return value * ANGLE[unit];
+  throw new NotConvertible(`unexpected ${unit} in a colour channel`);
 }

@@ -4,10 +4,10 @@ Generated from `eslint-plugin-gameface` 1.3.1, Gameface 3.1.4.1. Every catalog i
 
 | Outcome | Items |
 | --- | ---: |
-| Converted exactly | 133 |
+| Converted exactly | 179 |
 | Partly converted | 3 |
-| Removed (Gameface ignores it; no equivalent exists) | 614 |
-| Already accepted | 8 |
+| Removed (Gameface ignores it; no equivalent exists) | 564 |
+| Already accepted | 12 |
 | **Total** | **758** |
 
 ## Unsupported properties
@@ -375,11 +375,11 @@ Generated from `eslint-plugin-gameface` 1.3.1, Gameface 3.1.4.1. Every catalog i
 | `align-self:baseline` | removed | _(removed)_ |
 | `align-self:end` | removed | _(removed)_ |
 | `align-self:start` | removed | _(removed)_ |
-| `animation-delay:initial` | removed | _(removed)_ |
-| `animation-duration:auto` | removed | _(removed)_ |
+| `animation-delay:initial` | converted | `.t { animation-delay: 0s; }` |
+| `animation-duration:auto` | converted | `.t { animation-duration: 0s; }` |
 | `animation-timing-function:jump` | converted | `.t { animation-timing-function: steps(2, start); }` |
-| `backdrop-filter:initial` | removed | _(removed)_ |
-| `background-color:initial` | removed | _(removed)_ |
+| `backdrop-filter:initial` | converted | `.t { backdrop-filter: none; }` |
+| `background-color:initial` | converted | `.t { background-color: transparent; }` |
 | `background-image:element` | removed | _(removed)_ |
 | `background-image:gradients` | unchanged | `.t { background-image: linear-gradient(red, blue); }` |
 | `background-image:image-rect` | removed | _(removed)_ |
@@ -389,8 +389,8 @@ Generated from `eslint-plugin-gameface` 1.3.1, Gameface 3.1.4.1. Every catalog i
 | `background-image:repeating-linear-gradient(red 0 10px,blue 10px 20px)` | converted | `.t { background-image: repeating-linear-gradient(red 0, red 10px, blue 10px, blue 20px); }` |
 | `background-image:repeating-radial-gradient(red 0 10px,blue 10px 20px)` | converted | `.t { background-image: repeating-radial-gradient(red 0, red 10px, blue 10px, blue 20px); }` |
 | `background-repeat:space` | removed | _(removed)_ |
-| `border-bottom-left-radius:percentages` | removed | _(removed)_ |
-| `border-bottom-right-radius:percentages` | removed | _(removed)_ |
+| `border-bottom-left-radius:percentages` | unchanged | `.t { border-bottom-left-radius: 50%; }` |
+| `border-bottom-right-radius:percentages` | unchanged | `.t { border-bottom-right-radius: 50%; }` |
 | `border-bottom-style:dashed` | removed | _(removed)_ |
 | `border-bottom-style:dotted` | removed | _(removed)_ |
 | `border-bottom-style:double` | removed | _(removed)_ |
@@ -398,9 +398,9 @@ Generated from `eslint-plugin-gameface` 1.3.1, Gameface 3.1.4.1. Every catalog i
 | `border-bottom-style:inset` | removed | _(removed)_ |
 | `border-bottom-style:outset` | removed | _(removed)_ |
 | `border-bottom-style:ridge` | removed | _(removed)_ |
-| `border-image-outset:initial` | removed | _(removed)_ |
+| `border-image-outset:initial` | converted | `.t { border-image-outset: 0; }` |
 | `border-image-repeat:space` | removed | _(removed)_ |
-| `border-image-slice:initial` | removed | _(removed)_ |
+| `border-image-slice:initial` | converted | `.t { border-image-slice: 100%; }` |
 | `border-left-style:dashed` | removed | _(removed)_ |
 | `border-left-style:dotted` | removed | _(removed)_ |
 | `border-left-style:double` | removed | _(removed)_ |
@@ -417,8 +417,8 @@ Generated from `eslint-plugin-gameface` 1.3.1, Gameface 3.1.4.1. Every catalog i
 | `border-right-style:ridge` | removed | _(removed)_ |
 | `border-style:dashed` | removed | _(removed)_ |
 | `border-style:dotted` | removed | _(removed)_ |
-| `border-top-left-radius:percentages` | removed | _(removed)_ |
-| `border-top-right-radius:percentages` | removed | _(removed)_ |
+| `border-top-left-radius:percentages` | unchanged | `.t { border-top-left-radius: 50%; }` |
+| `border-top-right-radius:percentages` | unchanged | `.t { border-top-right-radius: 50%; }` |
 | `border-top-style:dashed` | removed | _(removed)_ |
 | `border-top-style:dotted` | removed | _(removed)_ |
 | `border-top-style:double` | removed | _(removed)_ |
@@ -455,9 +455,9 @@ Generated from `eslint-plugin-gameface` 1.3.1, Gameface 3.1.4.1. Every catalog i
 | `content:gradient` | removed | _(removed)_ |
 | `content:image-set` | removed | _(removed)_ |
 | `content:url` | removed | _(removed)_ |
-| `cx:initial` | removed | _(removed)_ |
-| `cy:initial` | removed | _(removed)_ |
-| `d:initial` | removed | _(removed)_ |
+| `cx:initial` | converted | `.t { cx: 0; }` |
+| `cy:initial` | converted | `.t { cy: 0; }` |
+| `d:initial` | converted | `.t { d: none; }` |
 | `display:contents` | removed | _(removed)_ |
 | `display:flow-root` | removed | _(removed)_ |
 | `display:grid` | removed | _(removed)_ |
@@ -481,15 +481,15 @@ Generated from `eslint-plugin-gameface` 1.3.1, Gameface 3.1.4.1. Every catalog i
 | `display:table-header-group` | removed | _(removed)_ |
 | `display:table-row` | removed | _(removed)_ |
 | `display:table-row-group` | removed | _(removed)_ |
-| `fill:initial` | removed | _(removed)_ |
-| `fill-opacity:initial` | removed | _(removed)_ |
-| `filter:initial` | removed | _(removed)_ |
+| `fill:initial` | converted | `.t { fill: black; }` |
+| `fill-opacity:initial` | converted | `.t { fill-opacity: 1; }` |
+| `filter:initial` | converted | `.t { filter: none; }` |
 | `flex-basis:content` | removed | _(removed)_ |
 | `flex-basis:fit-content` | removed | _(removed)_ |
 | `flex-basis:max-content` | removed | _(removed)_ |
 | `flex-basis:min-content` | removed | _(removed)_ |
-| `flex-grow:initial` | removed | _(removed)_ |
-| `flex-shrink:initial` | removed | _(removed)_ |
+| `flex-grow:initial` | converted | `.t { flex-grow: 0; }` |
+| `flex-shrink:initial` | converted | `.t { flex-shrink: 1; }` |
 | `font-size:clamp(100px,20vw,200px)` | converted | `.t { font-size: 100px; } @media (min-width: 500px) {   .t { font-size: 20vw; } } @media (min-width: 1000px) {   .t { font-size: 200px; } }` |
 | `font-size:clamp(12px,14px,16px)` | converted | `.t { font-size: 14px; }` |
 | `font-size:math` | removed | _(removed)_ |
@@ -535,7 +535,7 @@ Generated from `eslint-plugin-gameface` 1.3.1, Gameface 3.1.4.1. Every catalog i
 | `mask-clip:text` | removed | _(removed)_ |
 | `mask-mode:luminance` | removed | _(removed)_ |
 | `mask-mode:match-source` | removed | _(removed)_ |
-| `mask-repeat:initial` | removed | _(removed)_ |
+| `mask-repeat:initial` | converted | `.t { mask-repeat: repeat; }` |
 | `mask-repeat:space` | removed | _(removed)_ |
 | `max-height:anchor-size` | removed | _(removed)_ |
 | `max-height:fit-content` | removed | _(removed)_ |
@@ -562,38 +562,38 @@ Generated from `eslint-plugin-gameface` 1.3.1, Gameface 3.1.4.1. Every catalog i
 | `mix-blend-mode:plus-darker` | removed | _(removed)_ |
 | `mix-blend-mode:plus-lighter` | removed | _(removed)_ |
 | `offset:initial` | removed | _(removed)_ |
-| `opacity:percentages` | removed | _(removed)_ |
+| `opacity:percentages` | converted | `.t { opacity: 0.5; }` |
 | `overflow-x:clip` | removed | _(removed)_ |
 | `overflow-y:clip` | removed | _(removed)_ |
-| `padding-bottom:initial` | removed | _(removed)_ |
-| `padding-left:initial` | removed | _(removed)_ |
-| `padding-right:initial` | removed | _(removed)_ |
-| `padding-top:initial` | removed | _(removed)_ |
+| `padding-bottom:initial` | converted | `.t { padding-bottom: 0; }` |
+| `padding-left:initial` | converted | `.t { padding-left: 0; }` |
+| `padding-right:initial` | converted | `.t { padding-right: 0; }` |
+| `padding-top:initial` | converted | `.t { padding-top: 0; }` |
 | `pointer-events:all` | removed | _(removed)_ |
 | `pointer-events:fill` | removed | _(removed)_ |
 | `pointer-events:painted` | removed | _(removed)_ |
 | `pointer-events:stroke` | removed | _(removed)_ |
 | `pointer-events:visible` | removed | _(removed)_ |
 | `position:sticky` | removed | _(removed)_ |
-| `r:initial` | removed | _(removed)_ |
+| `r:initial` | converted | `.t { r: 0; }` |
 | `right:anchor` | removed | _(removed)_ |
 | `right:anchor-size` | removed | _(removed)_ |
-| `rx:initial` | removed | _(removed)_ |
-| `ry:initial` | removed | _(removed)_ |
-| `shape-rendering:initial` | removed | _(removed)_ |
-| `stop-color:initial` | removed | _(removed)_ |
-| `stop-opacity:initial` | removed | _(removed)_ |
-| `stroke:initial` | removed | _(removed)_ |
-| `stroke-dasharray:none` | removed | _(removed)_ |
-| `stroke-dashoffset:initial` | removed | _(removed)_ |
-| `stroke-miterlimit:initial` | removed | _(removed)_ |
-| `stroke-opacity:initial` | removed | _(removed)_ |
-| `stroke-width:initial` | removed | _(removed)_ |
+| `rx:initial` | converted | `.t { rx: auto; }` |
+| `ry:initial` | converted | `.t { ry: auto; }` |
+| `shape-rendering:initial` | converted | `.t { shape-rendering: auto; }` |
+| `stop-color:initial` | converted | `.t { stop-color: black; }` |
+| `stop-opacity:initial` | converted | `.t { stop-opacity: 1; }` |
+| `stroke:initial` | converted | `.t { stroke: none; }` |
+| `stroke-dasharray:none` | converted | `.t { stroke-dasharray: 0; }` |
+| `stroke-dashoffset:initial` | converted | `.t { stroke-dashoffset: 0; }` |
+| `stroke-miterlimit:initial` | converted | `.t { stroke-miterlimit: 4; }` |
+| `stroke-opacity:initial` | converted | `.t { stroke-opacity: 1; }` |
+| `stroke-width:initial` | converted | `.t { stroke-width: 1px; }` |
 | `text-align:end` | converted | `.t { text-align: right; }` |
 | `text-align:match-parent` | converted | `.t { text-align: inherit; }` |
 | `text-align:start` | converted | `.t { text-align: left; }` |
-| `text-anchor:initial` | removed | _(removed)_ |
-| `text-decoration-color:initial` | removed | _(removed)_ |
+| `text-anchor:initial` | converted | `.t { text-anchor: start; }` |
+| `text-decoration-color:initial` | converted | `.t { text-decoration-color: currentcolor; }` |
 | `text-decoration-line:blink` | removed | _(removed)_ |
 | `text-decoration-line:grammar-error` | removed | _(removed)_ |
 | `text-decoration-line:spelling-error` | removed | _(removed)_ |
@@ -604,8 +604,8 @@ Generated from `eslint-plugin-gameface` 1.3.1, Gameface 3.1.4.1. Every catalog i
 | `text-decoration-thickness:from-font` | removed | _(removed)_ |
 | `text-decoration-thickness:percentage` | converted | `.t { text-decoration-thickness: 0.1em; }` |
 | `text-overflow:string` | removed | _(removed)_ |
-| `text-stroke-color:initial` | removed | _(removed)_ |
-| `text-stroke-width:initial` | removed | _(removed)_ |
+| `text-stroke-color:initial` | converted | `.t { text-stroke-color: currentcolor; }` |
+| `text-stroke-width:initial` | converted | `.t { text-stroke-width: 0; }` |
 | `text-transform:full-size-kana` | removed | _(removed)_ |
 | `text-transform:full-width` | removed | _(removed)_ |
 | `text-transform:math-auto` | removed | _(removed)_ |
@@ -615,17 +615,17 @@ Generated from `eslint-plugin-gameface` 1.3.1, Gameface 3.1.4.1. Every catalog i
 | `text-underline-position:right` | removed | _(removed)_ |
 | `top:anchor` | removed | _(removed)_ |
 | `top:anchor-size` | removed | _(removed)_ |
-| `transform:initial` | removed | _(removed)_ |
+| `transform:initial` | converted | `.t { transform: none; }` |
 | `transform:perspective(500px)` | converted | `.t { transform: matrix3d(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, -0.002, 0, 0, 0, 1); }` |
 | `transform:rotate(acos(1))` | converted | `.t { transform: rotate(0deg); }` |
 | `transform:rotate(asin(1))` | converted | `.t { transform: rotate(90deg); }` |
 | `transform:rotate(atan(1))` | converted | `.t { transform: rotate(45deg); }` |
 | `transform:rotate(atan2(1,1))` | converted | `.t { transform: rotate(45deg); }` |
 | `transform:skew(10deg)` | converted | `.t { transform: skewX(10deg); }` |
-| `transition-delay:initial` | removed | _(removed)_ |
-| `transition-duration:initial` | removed | _(removed)_ |
+| `transition-delay:initial` | converted | `.t { transition-delay: 0s; }` |
+| `transition-duration:initial` | converted | `.t { transition-duration: 0s; }` |
 | `transition-timing-function:jump` | converted | `.t { transition-timing-function: steps(2, start); }` |
-| `transition-timing-function:linear(0,0.25,0.5,0.75,1)` | removed | _(removed)_ |
+| `transition-timing-function:linear(0,0.25,0.5,0.75,1)` | converted | `.t { transition-timing-function: linear; }` |
 | `user-select:all` | removed | _(removed)_ |
 | `user-select:contain` | removed | _(removed)_ |
 | `vertical-align:bottom` | removed | _(removed)_ |
@@ -642,8 +642,8 @@ Generated from `eslint-plugin-gameface` 1.3.1, Gameface 3.1.4.1. Every catalog i
 | `width:max-content` | removed | _(removed)_ |
 | `width:min-content` | removed | _(removed)_ |
 | `width:stretch` | removed | _(removed)_ |
-| `x:initial` | removed | _(removed)_ |
-| `y:initial` | removed | _(removed)_ |
+| `x:initial` | converted | `.t { x: 0; }` |
+| `y:initial` | converted | `.t { y: 0; }` |
 
 ## Unsupported functions
 
@@ -665,7 +665,7 @@ Generated from `eslint-plugin-gameface` 1.3.1, Gameface 3.1.4.1. Every catalog i
 | `hwb` | converted | `.t { color: rgb(255, 0, 0); }` |
 | `lab` | converted | `.t { color: rgb(191, 87, 0); }` |
 | `lch` | converted | `.t { color: rgb(214, 59, 64); }` |
-| `linear` | removed | _(removed)_ |
+| `linear` | converted | `.t { transition-timing-function: linear; }` |
 | `max` | converted | `.t { font-size: 16px; }` |
 | `min` | converted | `.t { font-size: 12px; }` |
 | `mod` | converted | `.t { font-size: 2px; }` |
@@ -719,7 +719,7 @@ Generated from `eslint-plugin-gameface` 1.3.1, Gameface 3.1.4.1. Every catalog i
 | `:empty` | removed | _(removed)_ |
 | `:enabled` | removed | _(removed)_ |
 | `:first` | removed | _(removed)_ |
-| `:first-of-type` | removed | _(removed)_ |
+| `:first-of-type` | converted | `.t:nth-of-type(1) { color: red; }` |
 | `:focus-visible` | removed | _(removed)_ |
 | `:focus-within` | removed | _(removed)_ |
 | `:fullscreen` | removed | _(removed)_ |
@@ -735,7 +735,7 @@ Generated from `eslint-plugin-gameface` 1.3.1, Gameface 3.1.4.1. Every catalog i
 | `:is(.foo)` | converted | `.t.foo { color: red; }` |
 | `:is(:hover)` | converted | `.t:hover { color: red; }` |
 | `:lang(en)` | removed | _(removed)_ |
-| `:last-of-type` | removed | _(removed)_ |
+| `:last-of-type` | converted | `.t:nth-last-of-type(1) { color: red; }` |
 | `:left` | removed | _(removed)_ |
 | `:link` | removed | _(removed)_ |
 | `:modal` | removed | _(removed)_ |
@@ -755,7 +755,7 @@ Generated from `eslint-plugin-gameface` 1.3.1, Gameface 3.1.4.1. Every catalog i
 | `:read-write` | removed | _(removed)_ |
 | `:required` | removed | _(removed)_ |
 | `:right` | removed | _(removed)_ |
-| `:scope` | removed | _(removed)_ |
+| `:scope` | converted | `.t:root { color: red; }` |
 | `:seeking` | removed | _(removed)_ |
 | `:stalled` | removed | _(removed)_ |
 | `:state(custom-state)` | removed | _(removed)_ |

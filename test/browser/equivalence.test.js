@@ -7,7 +7,7 @@ import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { transformCss } from '../../src/index.js';
 import { convertColor } from '../../src/colors.js';
-import { converter, parse } from 'culori';
+import { converter, parse, toGamut } from 'culori';
 import { closeBrowser, compareRender, evaluateWith, getBrowser } from './harness.js';
 
 after(closeBrowser);
@@ -327,3 +327,97 @@ function mulberry32(seed) {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
+
+// ---------------------------------------------------------------- rewrites added in 0.2
+
+equivalent('initial keyword, percentage opacity and pseudo-class aliases', {
+  css: `
+    .b0 { padding: 9px; padding-top: initial; padding-left: initial; background-color: red; }
+    .b0 { background-color: initial; opacity: 50%; }
+    .f { display: flex; width: 300px; } .f i { flex-grow: 1; height: 10px; background: #888; } .f i:first-of-type { flex-grow: initial; width: 20px; }
+    ul p:first-of-type { color: red; } ul p:last-of-type { color: blue; } ul p { font-weight: bold; }
+    :scope > body .b1 { color: green; }`,
+  html: `${boxes(2)}<div class="f"><i></i><i></i><i></i></div><ul><li><p>a</p><span>s</span><p>b</p><p>c</p></li></ul>`,
+  minConverted: 7,
+});
+
+equivalent('stroke-dasharray: none draws like a zero-sum dash array', {
+  css: 'svg { display: block; } path { stroke: red; stroke-width: 6px; stroke-dasharray: 10 5; } path.n { stroke-dasharray: none; }',
+  html: '<svg width="200" height="40"><path d="M5 10 H195" /><path class="n" d="M5 30 H195" /></svg>',
+  minConverted: 1,
+});
+
+test('a straight-line linear() samples like linear', async () => {
+  const css = '.b0 { animation: fade 1000ms linear(0, 0.25, 0.5, 0.75, 1) paused; } .b1 { animation: fade 1000ms linear(0 0%, 0.3 30%, 1 100%) paused; } @keyframes fade { from { opacity: 0 } to { opacity: 1 } }';
+  const { out } = rewrite(css);
+  assert.equal((out.match(/linear(?!\()/g) ?? []).length, 2, out);
+  const sample = (sheet) => evaluateWith(sheet, boxes(2), () => [...document.querySelectorAll('div')].map((el) => [0, 1, 123, 300, 500, 777, 999].map((t) => {
+    const a = el.getAnimations()[0];
+    a.currentTime = t;
+    return getComputedStyle(el).opacity;
+  })));
+  assert.deepEqual(await sample(out), await sample(css));
+});
+
+// Gameface-mode syntax lowering. Each rewrite must also be exact in a desktop
+// browser, so render the input and the output in Chromium. (prune is off: it
+// removes what Gameface ignores, which a browser would still render.)
+equivalent('gameface mode: nesting, media ranges, light-dark, relative colours and units', {
+  css: `
+    .b0 { color: red; &:hover { color: blue; } .w & { color: green; } & + .b1 { padding-left: 5px; } }
+    .b2, .b3 { & span { font-weight: bold; } @media (width >= 640px) { background: #eee; } }
+    @media (400px <= width <= 800px) { .b4 { padding-top: 7px; } }
+    @media (height <= 600px), (16/9 <= aspect-ratio) { .b5 { padding-bottom: 3px; } }
+    .b6 { color: light-dark(rgb(10 20 30), white); background-color: rgb(from hsl(200 60% 40%) r g calc(b + 30) / 80%); }
+    .b7 { border: 3px solid oklch(from #c08040 calc(l * 0.8) c h); color: hwb(from teal calc(h + 30) w b); }
+    .b8 { height: 10dvh; width: 30svw; padding-left: 2vi; margin-top: 1vb; min-height: 5lvh; }
+    .b9 { width: 10cqw; height: 2cm; padding-top: 3mm; padding-left: 1pc; margin-left: 8q; }`,
+  html: `${boxes(10)}<div class="w"><div class="b0">w</div></div><div class="b2"><span>s</span></div>`,
+  options: { mode: 'gameface', disable: ['prune', 'supports', 'media-types'] },
+  viewports: [[399, 500], [400, 500], [639, 700], [640, 700], [800, 700], [801, 450], [1280, 720]],
+  minConverted: 15,
+});
+
+test('random relative colours match Chromium', async () => {
+  const rand = mulberry32(23);
+  const r = (a, b) => a + (b - a) * rand();
+  const origin = () => `rgb(${r(0, 255) | 0} ${r(0, 255) | 0} ${r(0, 255) | 0})`;
+  const cases = [];
+  for (let i = 0; i < 80; i++) cases.push(`rgb(from ${origin()} calc(r * ${r(0.2, 1.4).toFixed(2)}) g calc(b + ${r(-50, 50).toFixed(0)}) / ${r(0.1, 1).toFixed(2)})`);
+  for (let i = 0; i < 80; i++) cases.push(`hsl(from ${origin()} calc(h + ${r(0, 360).toFixed(0)}) s calc(l * ${r(0.5, 1.2).toFixed(2)}))`);
+  for (let i = 0; i < 80; i++) cases.push(`hwb(from ${origin()} h calc(w * 0.5) b)`);
+  for (let i = 0; i < 80; i++) cases.push(`oklch(from ${origin()} calc(l * ${r(0.6, 1).toFixed(2)}) calc(c * ${r(0, 1).toFixed(2)}) calc(h + ${r(0, 90).toFixed(0)}))`);
+  for (let i = 0; i < 80; i++) cases.push(`lab(from ${origin()} l calc(a * 0.5) calc(b * 0.5) / alpha)`);
+  const pairs = [];
+  for (const c of cases) {
+    const { css } = transformCss(`.a { color: ${c}; }`, { mode: 'gameface', disable: ['prune'] });
+    const m = /color: (rgba?\([^)]*\))/.exec(css);
+    if (m) pairs.push([c, m[1]]);
+  }
+  assert.ok(pairs.length > 350, `only ${pairs.length} converted`);
+  const browser = await getBrowser();
+  const page = await browser.newPage();
+  const results = await page.evaluate((pairs) => {
+    const el = document.createElement('div');
+    document.body.append(el);
+    const computed = (c) => { el.style.color = ''; el.style.color = c; return getComputedStyle(el).color; };
+    return pairs.map(([a, b]) => [a, b, computed(a), computed(b)]);
+  }, pairs);
+  await page.close();
+  const toRgb = converter('rgb');
+  const gamut = toGamut('rgb', 'oklch');
+  const channels = (text) => {
+    const p = parse(text);
+    const inGamut = ['r', 'g', 'b'].every((k) => { const v = toRgb(p)[k]; return v >= -1e-6 && v <= 1 + 1e-6; });
+    // Chromium keeps out-of-gamut lab/oklch values and maps them when painting; compare mapped values
+    const c = inGamut || /^(rgb|hsl|hwb|color\(srgb)/.test(text) ? toRgb(p) : gamut(p);
+    return [c.r, c.g, c.b].map((v) => Math.min(1, Math.max(0, v)) * 255).concat((c.alpha ?? 1) * 255);
+  };
+  const bad = results.filter(([, , x, y]) => {
+    const cx = channels(x);
+    const cy = channels(y);
+    if (Math.abs(Math.round(cx[3]) - Math.round(cy[3])) > 1) return true;
+    return cx.slice(0, 3).some((v, i) => Math.abs(v - cy[i]) > 0.6);
+  });
+  assert.deepEqual(bad.slice(0, 10), [], `${bad.length} of ${results.length} differ`);
+});

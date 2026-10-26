@@ -28,6 +28,7 @@ const SAMPLE_VALUES = {
 const MARKER_SAMPLES = {
   number: (prop) => (prop === 'font-weight' ? '700' : '1'),
   percentage: () => '10%',
+  percentages: () => '50%',
   string: () => '"…"',
   gradients: () => 'linear-gradient(red, blue)',
   gradient: () => 'linear-gradient(red, blue)',

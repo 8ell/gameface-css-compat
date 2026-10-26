@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.2.0 — 2026-10-27
+
+- Coverage: 179 catalog items are now converted exactly, up from 133. 564 are removed and reported, down from 614.
+  - `initial` on 38 properties → the property's initial value.
+  - `opacity: 50%` → `0.5`.
+  - `stroke-dasharray: none` → `0`.
+  - Straight-line `linear()` easings → `linear`.
+  - `animation-duration: auto` → `0s` (gameface mode).
+  - `:first-of-type` / `:last-of-type` → `:nth-of-type(1)` / `:nth-last-of-type(1)`.
+  - `:scope` → `:root` outside `@scope`.
+- Syntax lowering in gameface mode, for modern syntax the linter does not flag. Each rewrite is exact in any engine:
+  - native CSS nesting is flattened;
+  - media range syntax becomes `min-`/`max-` features;
+  - `light-dark()` becomes its light colour;
+  - relative colours become `rgb()`;
+  - `dvh`/`svh`/`lvh`/`vi`/`vb`/`cq*` units become viewport units;
+  - `cm`/`mm`/`q`/`pc` become `px`.
+- New approximation `individual-transforms`: merges `translate`/`rotate`/`scale` into `transform`.
+- Fix: large `--json` output from the CLI was cut off at 64 KB when piped. The upstream sync reads this output.
+- Release: any version on `main` that is not on npm yet is published by CI (tests → npm publish with provenance → tag and GitHub Release).
+- Security hardening:
+  - GitHub Actions are pinned to commit SHAs.
+  - Workflows keep no credentials on disk.
+  - Jobs run with the least permissions they need.
+  - `npm audit signatures` checks the registry signatures of dependencies.
+  - The upstream package is installed with `--ignore-scripts`.
+  - Upstream major versions are never merged automatically.
+  - Added SECURITY.md.
+
 ## 0.1.0 — 2026-10-27
 
 First release.
