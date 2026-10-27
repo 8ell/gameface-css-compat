@@ -28,6 +28,7 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     permissions:
+      actions: write # keep the schedule alive (see the last step)
       contents: write
       pull-requests: write
     steps:
@@ -71,3 +72,10 @@ jobs:
         run: |
           gh pr merge "$PR" --auto --squash --repo "$GITHUB_REPOSITORY" \
             || gh pr merge "$PR" --squash --repo "$GITHUB_REPOSITORY"
+      # GitHub disables scheduled workflows in public repositories after 60
+      # days without activity. Upstream may not change for that long, so
+      # re-enable this workflow on every run to keep the weekly check going.
+      - if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X PUT "repos/$GITHUB_REPOSITORY/actions/workflows/upstream-sync.yml/enable"
